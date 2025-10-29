@@ -1,0 +1,37 @@
+Server
+
+Pasta com todos arquivos do servidor
+
+-------- Client
+	
+	Código MAIN para executar Cliente
+	Código BROADCAST_RECEIVER para identificar HUBS na LAN
+	
+-------- Hub
+
+	Código HUB para gerenciar HUB do servidor e salas
+	Código BROADCAST para enviar sinal aos dispositivos LAN
+	
+-------- Room
+	
+	Código ROOM para gerenciar os jogos iniciados
+	
+TrucoLogic
+
+	Lógica do TRUCO
+	
+ProjectUI
+
+	Interface gráfica do projeto
+
+requirements.txt
+
+	Bibliotecas necessárias para executar Servidor e Cliente
+
+requirements.client.txt
+
+	Bibliotecas necessárias para executar apenas Cliente
+
+requirements.server.txt
+
+	Bibliotecas necessárias para executar apenas Servidor

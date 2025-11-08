@@ -38,7 +38,6 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
     while len(players) < 2: #C: 4 players
         conn, addr = s.accept()
         players.append(conn)
-
     start_game()
 
 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:

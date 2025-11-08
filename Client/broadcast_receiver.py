@@ -20,10 +20,9 @@ def broadcast_receive():
                 pass
             # mostrar lista
             if servers:
-                print("Servidores encontrados:")
                 for ip, (name, ipservice, port) in servers.items():
                     if name == 'TrucoHUB':
-                        return (ipservice, port)
+                        return (ipservice, int(port))
             else:
                 pass
             time.sleep(1)

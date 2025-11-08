@@ -1,7 +1,6 @@
 import socket
 import time
 import json
-import os
 
 def get_local_ip():
     with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
@@ -13,14 +12,9 @@ def get_local_ip():
         return ip
 
 PORT = 50000             # porta conhecida para descoberta
-INTERVAL = 2.0           # segundos entre anúncios
+INTERVAL = 2           # segundos entre anúncios
 SERVICE_NAME = "TrucoHUB"
 IP = get_local_ip()
-stop = False
-
-def stop_broadcast():
-    global stop
-    stop = True
 
 def broadcast(port):
     with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
@@ -31,4 +25,3 @@ def broadcast(port):
             # broadcast para endereço de broadcast genérico (0.0.0.0):PORT ou 255.255.255.255
             s.sendto(message, ('<broadcast>', PORT))
             time.sleep(INTERVAL)
-            if stop: break

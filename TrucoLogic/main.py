@@ -2,6 +2,56 @@ from player import Player
 from team import Team
 from turn import Turn
 
+def manage_truco(turn, caller):
+    answer_player = players[(caller.id + 1) % len(players)]
+    while True:
+        ans = input(f'{answer_player.name} aceita truco? YES/NOO para aceitar ou recusar{", RET para aumentar" if turn.turn_value == 1 else ", VQT para aumentar" if turn.turn_value == 2 else ""}')
+        match ans:
+            case 'YES':
+                turn.call_truco(caller.team)
+                return 0
+            
+            case 'NO':
+                turn.recused_truco(caller.team)
+                return 0
+                
+            case 'RET':
+                if turn.turn_value == 1:
+                    turn.call_truco(answer_player.team)
+                    return manage_truco(turn, answer_player)
+            
+            case 'VQT':
+                if turn.turn_value == 2:
+                    turn.call_truco(answer_player.team)
+                    return manage_truco(turn, answer_player)
+
+def manage_envido(turn : Turn, caller : Player) -> None:
+    answer_player = players[(caller.id + 1) % len(players)]
+    while True:
+        ans = input(f'{answer_player.name} aceita envido? YES/NOO para aceitar ou recusar, ou REN, FEN para aumentar: ')
+        match ans:
+            case 'YES':
+                winners = turn.call_envido(caller.team, accepted=True)
+                print(f'\nORDEM DO ENVIDO')
+                for player in winners:
+                    print(f'{player.name} : {player.envido_points}')
+                return 0
+            
+            case 'NO':
+                turn.call_envido(caller.team, accepted=False)
+                return 0
+            
+            case 'REN':
+                if not any(env in turn.envidos for env in ['r', 'f']):
+                    turn.envidos += 'r'
+                    return manage_envido(turn, answer_player)
+            
+            case 'FEN':
+                if 'f' not in turn.envidos:
+                    turn.envidos += 'f'
+                    return manage_envido(turn, answer_player)
+            
+
 if __name__ == '__main__':
     t1 = Team('timeteu')
     t2 = Team('lh')
@@ -24,41 +74,33 @@ if __name__ == '__main__':
         t2.is_hand = not t2.is_hand
         p = (p + 1) % len(players)
         start_turn = players[p]
-        for team in teams:
-            print(f'Team {team.team}: {team.points}')
         turn = Turn(players, teams)
-        print(th.cards, th.envido_points, th.flor)
-        print(lh.cards, lh.envido_points, lh.flor)
-
-        #test envido
-        envido_chamado = False
-        # pergunta p mao
-        resposta = input(f"{start_turn.name}, deseja jogar envido? (n = não / e = envido / r = real envido / f = falta envido): ").strip().lower()
-        if resposta in ('e', 'r', 'f'):
-            tipo = (
-                'envido' if resposta == 'e'
-                else 'real_envido' if resposta == 'r'
-                else 'falta_envido'
-            )
-            turn.envido(start_turn, tipo)
-            envido_chamado = True
-        else: #outro time pergunta
-            next_player = [p for p in players if p != start_turn][0]
-            resposta = input(f"{next_player.name}, deseja jogar envido? (n = não / e = envido / r = real envido / f = falta envido): ").strip().lower()
-            if resposta in ('e', 'r', 'f'):
-                tipo = (
-                    'envido' if resposta == 'e'
-                    else 'real_envido' if resposta == 'r'
-                    else 'falta_envido'
-                )
-                turn.envido(next_player, tipo)
-                envido_chamado = True
-        #fim test envido
 
         while not turn.ended:
             for player in (players[start_turn.id:] + players[:start_turn.id]):
-                play_card = input(f'{player.name} - insira a carta: ')
-                turn.play_card(player, play_card)
+                print(f'ROUND INFOS:\nTEAM_1 POINTS: {teams[0].points}\nTEAM_2 POINTS: {teams[1].points}\nPLAYER HAND: {', '.join([card for card in player.cards if player.cards[card]])}\nPLAYER ENVIDO: {player.envido_points}\nTURN VALUE: {turn.turn_value}\nTURN ENVIDOS: {turn.envidos}\n')
+                while player.playing_turn:
+                    for team in teams:
+                        if team.points >= 30:
+                            print(f'Time {team.team} venceu o jogo!')
+                            exit(0)
+                    mov = input(f'{player.name} - insira seu movimento: ')
+                    match mov[:3]:
+                        case X if (X == 'ENV' or X == 'REN' or X == 'FEN'):
+                            if not turn.envidos and turn.round == 0 and turn.turn_value == 1:
+                                turn.envidos += mov[0].lower()
+                                manage_envido(turn, player)
+                        
+                        case 'TRC':
+                            if player.team is not turn.truco_caller and turn.turn_value < 4:
+                                manage_truco(turn, player)
+                        
+                        case 'ABN':
+                            turn.abandon_round(player)
+                            break
+                        
+                        case 'PLY':
+                            played = turn.play_card(player, mov[3:])
+                            if played: break
+                    
             start_turn = turn.end_round()
-            print(th.cards, th.envido_points, th.flor)
-            print(lh.cards, lh.envido_points, lh.flor)

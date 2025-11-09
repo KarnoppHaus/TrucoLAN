@@ -3,6 +3,7 @@ class Player:
         self.id : int = id
         self.name : str = name
         self.team = team
+        self.playing_turn : bool
         self.cards : dict
         self.flor : int | bool
         self.envido_points : int

@@ -12,6 +12,8 @@ class Client:
         self.rooms = []
         self.lr_event = threading.Event() # Evento para parar thread de listar salas
         self.thread_lock = threading.Lock() # Lock usado para receber salas e enviar códigos sem sobrepor envios
+        self.id : int
+        self.team : int
 
     def lr_timer(self, s, stop_event):
         while not stop_event.is_set():
@@ -19,7 +21,7 @@ class Client:
                 s.sendall(b'LSR')
                 self.rooms = pickle.loads(s.recv(1024))
             print(self.rooms)
-            time.sleep(2)
+            time.sleep(1)
 
     def connect_hub(self):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
@@ -46,29 +48,34 @@ class Client:
 
                     case b'NEX': # Sala não existente
                         print(f'A sala {data.decode()[3:]} não existe! Conecte-se a uma sala existente!')
+                        
+                    case b'WPD':
+                        print(f'A senha esta errada!')
 
                     case b'UCM': # Comando desconhecido
                         print(f'Comando desconhecido.')
 
+    def wait_while_ready(conn):
+        pass
+
     def connect_room(self, room_port):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             s.connect((self.HUB_HOST, room_port))
-            s.sendall(bytes(self.USER, encoding='utf-8'))
+            s.sendall(bytes(self.USER, encoding='utf-8')) # Send username
 
-            start = s.recv(1)
-
-            print(f'O jogo iniciará em breve...')
-            while True:
-                s.sendall(b'1') # Confirmação para seguir jogo
-                is_my_turn = s.recv(1)
-                if is_my_turn == b'1':
-                    move = input('Insira sua jogada: ')
-                    s.sendall(bytes(move + '\n', encoding='utf-8'))
-                if is_my_turn == b'2': break
-                else:
-                    print(f'Espere sua vez de jogar!')
-                data = s.recv(2048)
-                print(data)
+            #Room HUB
+            data = 0
+            while not data:
+                id = int(input(r'Insira o ID do jogador [0, ..., 3]: '))
+                ready = 1
+                while ready and not data:
+                    ready = int(input(f'Insira 1 para PRONTO e 0 para ESPERAR: '))
+                    s.sendall(pickle.dumps({'id': id, 'ready': ready}))
+                    data = int(s.recv(1))
+                    print(f'DATA: {data}')
+            
+            # Entrou na função start_game do ROOM -> Todos players tem ID único [0, 2, 4] setado e todos estão prontos
+            pass #TODO receber e enviar dados do truco
 
     def start(self):
         try:

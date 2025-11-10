@@ -11,7 +11,7 @@ def manage_truco(turn, caller):
                 turn.call_truco(caller.team)
                 return 0
             
-            case 'NO':
+            case 'NOO':
                 turn.recused_truco(caller.team)
                 return 0
                 
@@ -37,7 +37,7 @@ def manage_envido(turn : Turn, caller : Player) -> None:
                     print(f'{player.name} : {player.envido_points}')
                 return 0
             
-            case 'NO':
+            case 'NOO':
                 turn.call_envido(caller.team, accepted=False)
                 return 0
             
@@ -67,7 +67,6 @@ if __name__ == '__main__':
     t2.is_hand = True
 
     p = -1
-    sorted
 
     while True:
         t1.is_hand = not t1.is_hand
@@ -103,4 +102,4 @@ if __name__ == '__main__':
                             played = turn.play_card(player, mov[3:])
                             if played: break
                     
-            start_turn = turn.end_round()
+            if not turn.ended: start_turn = turn.end_round()

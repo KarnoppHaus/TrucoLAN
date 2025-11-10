@@ -22,7 +22,7 @@ class Hub:
     def handle_client(self, conn, addr):
         print(f'Connected by {addr}')
         with conn:
-            #try:
+            try:
                 while True:
                     data = conn.recv(1024)
                     if not data:
@@ -30,16 +30,20 @@ class Hub:
                     if data:
                         match data[:3]:
                             case b'CCT': # Conectar a sala
-                                room_name = data.decode()[3:]
+                                room_name, room_passwd = data.decode()[3:].split('\\n')
 
                                 if room_name in self.rooms:
-                                    conn.sendall(bytes(f'CCT{self.rooms.get(room_name)[0]}', encoding='utf-8'))
-                                    break
-                                print(f'{addr} -> Sala {room_name} cheia.')
-                                conn.sendall(bytes(f'NEX{room_name}', encoding='utf-8'))
+                                    if room_passwd == self.rooms.get(room_name, None)[2]:
+                                        conn.sendall(bytes(f'CCT{self.rooms.get(room_name)[0]}', encoding='utf-8'))
+                                        break
+                                    else:
+                                        conn.sendall(b'WPD')
+                                else:
+                                    print(f'{addr} -> Sala {room_name} cheia.')
+                                    conn.sendall(bytes(f'NEX{room_name}', encoding='utf-8'))
 
                             case b'CRT': # Criar sala
-                                room_name = data.decode()[3:]
+                                room_name, room_passwd, room_players = data.decode()[3:].split('\\n')
 
                                 with self.room_lock:
                                     if room_name not in self.rooms:
@@ -48,10 +52,11 @@ class Hub:
                                         new_env["PORT"] = str(port)
                                         new_env["ROOM_NAME"] = room_name
                                         new_env["HUB_PORT"] = str(self.PORT)
+                                        new_env["PLAYERS"] = str(room_players)
                                         room = subprocess.Popen(["python3", "Server/Room/room.py"], env=new_env)
                                         t.sleep(0.1)
                                         conn.sendall(bytes(f'RCS{port}', encoding='utf-8'))
-                                        self.rooms[room_name] = [port, room]
+                                        self.rooms[room_name] = [port, room, room_passwd, room_players]
                                         break
                                 print(f'{addr} -> Erro. Sala {room_name} já existente!')
                                 conn.sendall(bytes(f'AEX{room_name}', encoding='utf-8'))
@@ -63,13 +68,13 @@ class Hub:
                                 conn.sendall(bytes(f'A sala {room_name} foi removida com sucesso!', encoding='utf-8'))
 
                             case b'LSR': # Listar salas
-                                conn.sendall(pickle.dumps([room for room in self.rooms]))
+                                conn.sendall(pickle.dumps({key: room[3] for key, room in self.rooms.items()}))
 
                             case _: # Erro (qualquer comando diferente)
                                 print(f'{addr} -> Comando desconhecido: {data}')
                                 conn.sendall(bytes(f'UCM{data.decode()[3:]}', encoding='utf-8'))
-            #except Exception as e:
-            #    print(f'Erro na conexão de {addr}: {e}')
+            except Exception as e:
+                print(f'Erro na conexão de {addr}: {e}')
         print(f'{addr} -> Conexão Encerrada.')
 
     def start(self):

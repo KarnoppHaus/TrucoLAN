@@ -1,4 +1,4 @@
-from truco import Truco
+from .truco import Truco
 
 class Turn:
     def __init__(self, players : list, teams : list) -> None:
@@ -77,6 +77,8 @@ class Turn:
         for team in self.teams:
             if abandon_player.team is not team:
                 team.points += self.turn_value
+                if self.envidos == '' and self.round == 0:
+                    team.points += 1
                 self.ended = True
                 break
             

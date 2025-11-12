@@ -30,7 +30,7 @@ class Hub:
                     if data:
                         match data[:3]:
                             case b'CCT': # Conectar a sala
-                                room_name, room_passwd = data.decode()[3:].split('\\n')
+                                room_name, room_passwd = data.decode()[3:].split('\n')
 
                                 if room_name in self.rooms:
                                     if room_passwd == self.rooms.get(room_name, None)[2]:
@@ -43,7 +43,7 @@ class Hub:
                                     conn.sendall(bytes(f'NEX{room_name}', encoding='utf-8'))
 
                             case b'CRT': # Criar sala
-                                room_name, room_passwd, room_players = data.decode()[3:].split('\\n')
+                                room_name, room_passwd, room_players = data.decode()[3:].split('\n')
 
                                 with self.room_lock:
                                     if room_name not in self.rooms:
@@ -68,7 +68,7 @@ class Hub:
                                 conn.sendall(bytes(f'A sala {room_name} foi removida com sucesso!', encoding='utf-8'))
 
                             case b'LSR': # Listar salas
-                                conn.sendall(pickle.dumps({key: room[3] for key, room in self.rooms.items()}))
+                                conn.sendall(pickle.dumps({key for key, room in self.rooms.items()}))
 
                             case _: # Erro (qualquer comando diferente)
                                 print(f'{addr} -> Comando desconhecido: {data}')
@@ -80,7 +80,10 @@ class Hub:
     def start(self):
         try:
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                s.bind((self.HOST, 0))
+                s.bind((self.HOST, 52015))
+                self.PORT = 52015
+                print(f"[HUB] Listening on {self.HOST or '0.0.0.0'}:{self.PORT}")
+
                 self.PORT = s.getsockname()[1]
                 s.listen()
                 broadcast_thread = threading.Thread(target=broadcast.broadcast, args=(self.PORT,))

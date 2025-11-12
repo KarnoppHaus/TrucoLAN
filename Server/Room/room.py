@@ -38,7 +38,7 @@ def ready_page(conn : socket, addr) -> int:
         with players_lock:
             if players_ready[-1]:
                 break
-            if id >= 0 and id < len(players_conn) and players_conn[id] is None:
+            if id >= 0 and id < players_n - 1 and players_conn[id] is None:
                 players_conn[id] = conn
                 players_usernames[id] = user
                 if ready:
@@ -51,12 +51,12 @@ def ready_page(conn : socket, addr) -> int:
                 players_ready[int(id)] = 0
 
             if None in players_ready[:-1] or 0 in players_ready:
-                conn.sendall(b'0')
+                conn.sendall(b'0' + pickle.dumps(players_usernames))
             else:
                 players_ready[-1] = True
                 break
         
-    conn.sendall(b'1')
+    conn.sendall(b'1' + pickle.dumps(players_usernames))
     conn.recv(512)
     return 0
         
@@ -435,13 +435,14 @@ ready_page_threads = []
 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
     s.bind((HOST, PORT))
     s.listen(0)
-    while connected_players < players_n:
-        conn, addr = s.accept()
-        connected_players += 1
-        t = threading.Thread(target=ready_page, args=(conn, addr))
-        t.daemon = True
-        ready_page_threads.append(t)
-        t.start()
+    while not players_ready[-1]:
+        if connected_players < players_n:
+            conn, addr = s.accept()
+            connected_players += 1
+            t = threading.Thread(target=ready_page, args=(conn, addr))
+            t.daemon = True
+            ready_page_threads.append(t)
+            t.start()
     for t in ready_page_threads:
         t.join()
     start_game()

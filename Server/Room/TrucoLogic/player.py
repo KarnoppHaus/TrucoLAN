@@ -5,5 +5,5 @@ class Player:
         self.team = team
         self.playing_turn : bool
         self.cards : dict
-        self.flor : int | bool
+        self.flor : int | None
         self.envido_points : int

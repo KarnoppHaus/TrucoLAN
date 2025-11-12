@@ -61,7 +61,7 @@ class Truco:
 
     @staticmethod
     def flor(players : list) -> None:
-        """Calcula valores de flor a partir de uma lista de jogadores list[Player] => Player.flor : int(points) | False --- Player : False pode ocorrer caso o Player não possua Flor"""
+        """Calcula valores de flor a partir de uma lista de jogadores list[Player] => Player.flor : int(points) | None --- Player : False pode ocorrer caso o Player não possua Flor"""
         for player in players:
             values = list(map(lambda x: int(x[0]) if x[0] != 'j' and x[0] != 'q' and x[0] != 'k' else 0, player.cards))
             suits = list(map(lambda x: x[2:], player.cards))
@@ -71,7 +71,7 @@ class Truco:
                 val.setdefault(s, []).append(v)
 
             if len(val) > 1:
-                player.flor = False
+                player.flor = None
 
             else:
                 n, vs = val.popitem()

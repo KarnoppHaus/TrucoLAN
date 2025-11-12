@@ -13,3 +13,14 @@ CLIENT
     NEX -> NON EXISTENT => NEX[ROOM_NAME]
     WPD -> WRONG PASSWORD => WPD
     UCM -> UNKNOWN COMMAND => UCM[COMMAND]
+    MOV -> MOVEMENT on turn => MOV
+    ERR -> ERROR
+    SUC -> SUCCESS
+    AEN -> ANSWER ENVIDO CALL => AEN[envido/real_envido/falta_envido]
+    ATC -> ANSWER TRUCO CALL => ATC[truco/retruco/vale_quatro]
+    AFR -> ANSWER FLOR => AFR
+    INF -> GAME INFO => INF[Dict with Game Infos]
+    END -> GAME ENDED => END
+    CCF -> CAN CALL FLOR => CCF
+    RND -> ROUND ENDED => RND[Dict]
+    TND -> TURN ENDED => TND

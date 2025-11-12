@@ -54,7 +54,7 @@ class Hub:
                                         new_env["HUB_PORT"] = str(self.PORT)
                                         new_env["PLAYERS"] = str(room_players)
                                         room = subprocess.Popen(["python3", "Server/Room/room.py"], env=new_env)
-                                        t.sleep(0.1)
+                                        t.sleep(1)
                                         conn.sendall(bytes(f'RCS{port}', encoding='utf-8'))
                                         self.rooms[room_name] = [port, room, room_passwd, room_players]
                                         break

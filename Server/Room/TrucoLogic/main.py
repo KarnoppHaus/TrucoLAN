@@ -101,5 +101,5 @@ if __name__ == '__main__':
                         case 'PLY':
                             played = turn.play_card(player, mov[3:])
                             if played: break
-                    
+            
             if not turn.ended: start_turn = turn.end_round()

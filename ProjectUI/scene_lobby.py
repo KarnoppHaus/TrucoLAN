@@ -6,6 +6,8 @@ class SceneLobby(BaseScreen):
     
     def __init__(self, screen_width, screen_height, client):
         self.client = client
+        
+        self.__screen_z_index = 0
 
         super().__init__(screen_width, screen_height)
         self.label_lista_vazia = None
@@ -65,15 +67,15 @@ class SceneLobby(BaseScreen):
         btn_player_h = popup_h * 0.12
         btn_player_w = popup_w * 0.35
         self.btn_players_2 = Button(self.popup_rect.x + popup_w * 0.1, self.popup_rect.y + popup_h * 0.6, btn_player_w, btn_player_h,
-                                    "2 Jogadores", font_obj=self.fonte_pequena)
+                                    "2 Jogadores", font_obj=self.fonte_pequena, z_index=1)
         self.btn_players_4 = Button(self.popup_rect.x + popup_w * 0.55, self.popup_rect.y + popup_h * 0.6, btn_player_w, btn_player_h,
-                                    "4 Jogadores", font_obj=self.fonte_pequena)
+                                    "4 Jogadores", font_obj=self.fonte_pequena, z_index=1)
 
         btn_h = popup_h * 0.15
         self.btn_criar_ok = Button(self.popup_rect.x + popup_w * 0.1, self.popup_rect.y + popup_h * 0.8, popup_w * 0.35, btn_h,
-                                   "OK", font_obj=self.fonte_padrao)
+                                   "OK", font_obj=self.fonte_padrao, z_index=1)
         self.btn_criar_cancel = Button(self.popup_rect.x + popup_w * 0.55, self.popup_rect.y + popup_h * 0.8, popup_w * 0.35, btn_h,
-                                       "CANCELAR", font_obj=self.fonte_padrao)
+                                       "CANCELAR", font_obj=self.fonte_padrao, z_index=1)
         
 
 
@@ -90,9 +92,9 @@ class SceneLobby(BaseScreen):
                                             font_obj=self.fonte_padrao, placeholder="Digite a senha da sala")
         btn_h = popup_h * 0.18
         self.btn_entrar_ok = Button(self.popup_entrar_rect.x + popup_w * 0.1, self.popup_entrar_rect.y + popup_h * 0.75, popup_w * 0.35, btn_h,
-                                    "ENTRAR", font_obj=self.fonte_padrao)
+                                    "ENTRAR", font_obj=self.fonte_padrao, z_index=1)
         self.btn_entrar_cancel = Button(self.popup_entrar_rect.x + popup_w * 0.55, self.popup_entrar_rect.y + popup_h * 0.75, popup_w * 0.35, btn_h,
-                                        "CANCELAR", font_obj=self.fonte_padrao)
+                                        "CANCELAR", font_obj=self.fonte_padrao, z_index=1)
 
     def handle_events(self, events):
         #bridge = game_data['bridge']
@@ -135,16 +137,18 @@ class SceneLobby(BaseScreen):
         # return "LOBBY"
 
     def _handle_popup_criar(self, events):
+        self.__screen_z_index = 1
+        
         for event in events:
             self.input_criar_nome.handle_event(event)
             self.input_criar_senha.handle_event(event)
 
-            if self.btn_players_2.handle_event(event):
+            if self.btn_players_2.handle_event(event, z_index=1):
                 self.popup_player_count = 2
-            elif self.btn_players_4.handle_event(event):
+            elif self.btn_players_4.handle_event(event, z_index=1):
                 self.popup_player_count = 4
                 
-            if self.btn_criar_ok.handle_event(event):
+            if self.btn_criar_ok.handle_event(event, z_index=1):
                 nome_sala = self.input_criar_nome.text
                 senha_sala = self.input_criar_senha.text
                 if nome_sala:
@@ -153,15 +157,17 @@ class SceneLobby(BaseScreen):
                     self.mostrando_popup_criar = False
                     self._limpar_popups()
                     return f'CRT{nome_sala}\n{senha_sala}\n{self.popup_player_count}'
-            if self.btn_criar_cancel.handle_event(event):
+            if self.btn_criar_cancel.handle_event(event, z_index=1):
                 self.mostrando_popup_criar = False
                 self._limpar_popups()
         # return "LOBBY"
 
     def _handle_popup_entrar(self, events):
+        self.__screen_z_index = 1
+        
         for event in events:
             self.input_entrar_senha.handle_event(event)
-            if self.btn_entrar_ok.handle_event(event):
+            if self.btn_entrar_ok.handle_event(event, z_index=1):
                 senha_digitada = self.input_entrar_senha.text
                 if self.selected_room_name:
                     #msg = f'CCT{self.selected_room_name}\n{senha_digitada}'.encode()
@@ -170,7 +176,7 @@ class SceneLobby(BaseScreen):
                     srm = self.selected_room_name
                     self._limpar_popups()
                     return f'CCT{srm}\n{senha_digitada}'
-            if self.btn_entrar_cancel.handle_event(event):
+            if self.btn_entrar_cancel.handle_event(event, z_index=1):
                 self.mostrando_popup_entrar = False
                 self._limpar_popups()
         #return "LOBBY"
@@ -180,6 +186,7 @@ class SceneLobby(BaseScreen):
         self.input_criar_senha.text = ""
         self.input_entrar_senha.text = ""
         self.selected_room_name = None
+        self.__screen_z_index = 0
 
     def _atualizar_lista_salas(self, rooms):
         self.botoes_salas = []
@@ -213,11 +220,11 @@ class SceneLobby(BaseScreen):
 
         screen.blit(self.titulo_surf, self.titulo_rect)
 
-        self.btn_voltar.draw(screen)
-        self.btn_criar_sala.draw(screen)
+        self.btn_voltar.draw(screen, self.__screen_z_index)
+        self.btn_criar_sala.draw(screen, self.__screen_z_index)
 
         for btn in self.botoes_salas:
-            btn.draw(screen)
+            btn.draw(screen, self.__screen_z_index)
 
         if self.label_lista_vazia:
             screen.blit(self.label_lista_vazia, self.label_lista_vazia_rect)
@@ -267,10 +274,10 @@ class SceneLobby(BaseScreen):
             self.btn_players_4.cor_atual = self.btn_players_4.color_hover
             self.btn_players_4.text_color_atual = self.btn_players_4.text_color_hover
         screen.blit(self.popup_jogadores_label, self.popup_jogadores_label_rect)
-        self.btn_players_2.draw(screen)
-        self.btn_players_4.draw(screen)
-        self.btn_criar_ok.draw(screen)
-        self.btn_criar_cancel.draw(screen)
+        self.btn_players_2.draw(screen, self.__screen_z_index)
+        self.btn_players_4.draw(screen, self.__screen_z_index)
+        self.btn_criar_ok.draw(screen, self.__screen_z_index)
+        self.btn_criar_cancel.draw(screen, self.__screen_z_index)
 
     def _draw_popup_entrar(self, screen):
         self._draw_overlay(screen)
@@ -279,5 +286,5 @@ class SceneLobby(BaseScreen):
         screen.blit(self.popup_entrar_label, self.popup_entrar_label_rect)
         screen.blit(self.popup_entrar_nome_sala_surf, self.popup_entrar_nome_sala_rect) 
         self.input_entrar_senha.draw(screen)
-        self.btn_entrar_ok.draw(screen)
-        self.btn_entrar_cancel.draw(screen)
+        self.btn_entrar_ok.draw(screen, self.__screen_z_index)
+        self.btn_entrar_cancel.draw(screen, self.__screen_z_index)

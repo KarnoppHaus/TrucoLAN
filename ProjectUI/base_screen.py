@@ -94,7 +94,8 @@ class Button:
                  text_color_normal=COR_TEXTO_VERMELHO,
                  text_color_hover=COR_TEXTO_HOVER,
                  border_color=COR_TEXTO_VERMELHO,
-                 border_width=3):
+                 border_width=3,
+                 z_index=0):
         
         self.rect = pygame.Rect(x, y, width, height)
         self.text = text
@@ -109,14 +110,20 @@ class Button:
         # Borda
         self.border_color = border_color
         self.border_width = border_width
+        
+        # Z-Index
+        self.z_index = z_index
 
-    def draw(self, screen):
+    def draw(self, screen, z_index=0):
         """
         Desenha o botão e checa o hover AQUI.
         """
         # --- CORREÇÃO: Lógica de Hover movida para o DRAW ---
-        mouse_pos = pygame.mouse.get_pos()
-        hover = self.rect.collidepoint(mouse_pos)
+        if self.z_index == z_index:
+            mouse_pos = pygame.mouse.get_pos()
+            hover = self.rect.collidepoint(mouse_pos)
+        else:
+            hover = False
         
         cor_atual = self.color_hover if hover else self.color_normal
         text_color_atual = self.text_color_hover if hover else self.text_color_normal
@@ -135,11 +142,11 @@ class Button:
         text_rect = text_surf.get_rect(center=self.rect.center)
         screen.blit(text_surf, text_rect)
 
-    def handle_event(self, event):
+    def handle_event(self, event, z_index=0):
         """
         Agora só checa o clique, não mais o movimento.
         """
-        if event.type == pygame.MOUSEBUTTONDOWN:
+        if event.type == pygame.MOUSEBUTTONDOWN and self.z_index == z_index:
             if event.button == 1 and self.rect.collidepoint(event.pos):
                 return True # Clicou!
         return False

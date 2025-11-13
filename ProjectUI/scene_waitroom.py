@@ -4,7 +4,6 @@ import pickle
 from .base_screen import BaseScreen, Button
 
 class SceneWaitRoom(BaseScreen):
-    STATE_NAME = "WAITROOM"
 
     def __init__(self, screen_width, screen_height, client):
         self.client = client
@@ -13,9 +12,7 @@ class SceneWaitRoom(BaseScreen):
 
         # self.conectado_a_sala = False
 
-        # self.is_ready = False
         # self.meu_id_selecionado = -1
-        # self.max_players = 0
 
         self.titulo_surf = self.fonte_titulo.render("Aguardando Jogadores", True, self.cor_texto)
         self.titulo_rect = self.titulo_surf.get_rect(
@@ -47,7 +44,7 @@ class SceneWaitRoom(BaseScreen):
         slot_width = self.largura_tela * 0.3
         slot_height = self.altura_tela * 0.2
         
-        if self.max_players == 2:
+        if self.client.room_max_players == 2:
             posicoes = [
                 (self.largura_tela * 0.35, self.altura_tela * 0.5),
                 (self.largura_tela * 0.65, self.altura_tela * 0.5)
@@ -59,13 +56,13 @@ class SceneWaitRoom(BaseScreen):
             grid_center_x = self.largura_tela // 2
             grid_center_y = self.altura_tela // 2
             posicoes = [
-                (grid_center_x - offset_x, grid_center_y - offset_y),
-                (grid_center_x + offset_x, grid_center_y - offset_y),
-                (grid_center_x - offset_x, grid_center_y + offset_y),
-                (grid_center_x + offset_x, grid_center_y + offset_y)
+                (grid_center_x - offset_x, grid_center_y - offset_y), #sup esq
+                (grid_center_x + offset_x, grid_center_y - offset_y), #sup dir
+                (grid_center_x - offset_x, grid_center_y + offset_y), #inf esq
+                (grid_center_x + offset_x, grid_center_y + offset_y) #inf dir
             ]
         
-        for i in range(len(self.client.draw_data)):
+        for i in range(self.client.room_max_players):
             pos = posicoes[i]
             btn = Button(
                 x=pos[0] - slot_width // 2, y=pos[1] - slot_height // 2,
@@ -107,9 +104,9 @@ class SceneWaitRoom(BaseScreen):
     #         if isinstance(data, dict):
     #             # Atualiza "snapshot" dos jogadores
     #             self.players_snapshot = self.client.draw_data#data.get('players', [])
-    #             maxp = data.get('max_players', len(self.players_snapshot))
-    #             if maxp > 0 and maxp != self.max_players:
-    #                 self.max_players = maxp
+    #             maxp = data.get('self.client.room_max_players', len(self.players_snapshot))
+    #             if maxp > 0 and maxp != self.client.room_max_players:
+    #                 self.client.room_max_players = maxp
     #                 self._criar_slots_dinamicos()
     #     except Exception:
     #         pass
@@ -118,7 +115,7 @@ class SceneWaitRoom(BaseScreen):
     #         # if self.btn_voltar.handle_event(event):
     #         #     return "LOGOUT"
 
-    #         if not self.is_ready:
+    #         if not self.client.player_ready:
     #             for btn_slot in self.botoes_slots:
     #                 if btn_slot.handle_event(event):
     #                     self.meu_id_selecionado = btn_slot.slot_id
@@ -133,11 +130,11 @@ class SceneWaitRoom(BaseScreen):
     #                 if self.meu_id_selecionado == -1:
     #                     self.msg_status = "ERRO: O servidor ainda não te alocou!"
     #                 else:
-    #                     self.is_ready = not self.is_ready
-    #                     bridge.send_ready_status(self.meu_id_selecionado, int(self.is_ready))
+    #                     self.client.player_ready = not self.client.player_ready
+    #                     bridge.send_ready_status(self.meu_id_selecionado, int(self.client.player_ready))
     #             else:
-    #                 self.is_ready = not self.is_ready
-    #                 bridge.send_ready_status(self.meu_id_selecionado, int(self.is_ready))
+    #                 self.client.player_ready = not self.client.player_ready
+    #                 bridge.send_ready_status(self.meu_id_selecionado, int(self.client.player_ready))
     #     # return "WAITROOM"
 
     def handle_events(self, events):
@@ -146,65 +143,60 @@ class SceneWaitRoom(BaseScreen):
             #     return 
 
             if self.btn_pronto.handle_event(event):
-                return 
-            
-            for btn_slot in self.botoes_slots:
-                if btn_slot.handle_event(event):
-                    return 
-                
-        return None
+                self.client.player_ready = 0 if self.client.player_ready else 1
+            for id, btn_slot in enumerate(self.botoes_slots):
+                if btn_slot.handle_event(event) and not self.client.player_ready:
+                    self.client.player_id = id
 
     def draw(self, screen):
-        try:
             super().draw(screen)
-            players_data = self.players_snapshot
-            if self.max_players > 0 and len(self.botoes_slots) != self.max_players:
+            # players_data = self.players_snapshot
+            if self.client.room_max_players > 0 and len(self.botoes_slots) != self.client.room_max_players:
                 self._criar_slots_dinamicos()
             screen.blit(self.titulo_surf, self.titulo_rect)
             self.btn_voltar.draw(screen)
 
-            if self.is_ready:
+            if self.client.player_ready:
                 self.btn_pronto.text = "ESPERANDO..."
                 self.btn_pronto.rect = self.btn_pronto_original_rect.copy()
             else:
                 self.btn_pronto.text = "PRONTO"
                 self.btn_pronto.rect = self.btn_pronto_original_rect.copy()
-                if self.meu_id_selecionado != -1:
-                    pulse = 1.0 + (math.sin(pygame.time.get_ticks() * 0.006) * 0.05)
-                    new_width = self.btn_pronto_original_rect.width * pulse
-                    new_height = self.btn_pronto_original_rect.height * pulse
-                    self.btn_pronto.rect.width = new_width
-                    self.btn_pronto.rect.height = new_height
-                    self.btn_pronto.rect.center = self.btn_pronto_original_rect.center
+                # if self.meu_id_selecionado != -1:
+                #     pulse = 1.0 + (math.sin(pygame.time.get_ticks() * 0.006) * 0.05)
+                #     new_width = self.btn_pronto_original_rect.width * pulse
+                #     new_height = self.btn_pronto_original_rect.height * pulse
+                #     self.btn_pronto.rect.width = new_width
+                #     self.btn_pronto.rect.height = new_height
+                #     self.btn_pronto.rect.center = self.btn_pronto_original_rect.center
             self.btn_pronto.draw(screen)
 
             for i, btn_slot in enumerate(self.botoes_slots):
-                if i >= len(players_data):
-                    btn_slot.text = f"Slot {i} Vazio"
-                    btn_slot.border_color = self.cor_borda
-                    btn_slot.border_width = 3
-                    btn_slot.draw(screen)
-                    continue
-                player_info = players_data[i]
-                is_occupied = bool(player_info.get('name'))
-                is_ready = player_info.get('ready')
-                slot_name = player_info.get('name') if is_occupied else f"Slot {i} Vazio"
-                btn_slot.text = slot_name
-                if is_occupied and player_info.get('name') == game_data['username']:
-                    btn_slot.border_color = (0, 200, 0)
-                    btn_slot.border_width = 5
-                elif is_occupied:
-                    btn_slot.border_color = (200, 200, 0) if is_ready else (200, 0, 0)
-                    btn_slot.border_width = 3
-                else:
-                    btn_slot.border_color = self.cor_borda
-                    btn_slot.border_width = 3
+                # if i >= len(self.client.room_max_players):
+                btn_slot.text = f"Slot {i} Vazio" if self.client.draw_data[i] is None else self.client.draw_data[i]
+                btn_slot.border_color = self.cor_borda
+                btn_slot.border_width = 3
+                btn_slot.draw(screen)
+                    # continue
+                # player_info = players_data[i]
+                # is_occupied = bool(player_info.get('name'))
+                # self.client.player_ready = player_info.get('ready')
+                # slot_name = player_info.get('name') if is_occupied else f"Slot {i} Vazio"
+                # btn_slot.text = slot_name
+
+                # if is_occupied and player_info.get('name') == game_data['username']:
+                #     btn_slot.border_color = (0, 200, 0)
+                #     btn_slot.border_width = 5
+                # elif is_occupied:
+                #     btn_slot.border_color = (200, 200, 0) if client.player_ready else (200, 0, 0)
+                #     btn_slot.border_width = 3
+                # else:
+                #     btn_slot.border_color = self.cor_borda
+                #     btn_slot.border_width = 3
                 btn_slot.draw(screen)
 
-            if self.msg_status:
-                status_color = self.cor_erro if "Falha" in self.msg_status else self.cor_texto
-                status_surf = self.fonte_pequena.render(self.msg_status, True, status_color)
-                status_rect = status_surf.get_rect(center=(self.largura_tela // 2, self.altura_tela * 0.9))
-                screen.blit(status_surf, status_rect)
-        except Exception as e:
-            print("Erro no draw da SceneWaitRoom:", e)
+            # if self.msg_status:
+            #     status_color = self.cor_erro if "Falha" in self.msg_status else self.cor_texto
+            #     status_surf = self.fonte_pequena.render(self.msg_status, True, status_color)
+            #     status_rect = status_surf.get_rect(center=(self.largura_tela // 2, self.altura_tela * 0.9))
+            #     screen.blit(status_surf, status_rect)

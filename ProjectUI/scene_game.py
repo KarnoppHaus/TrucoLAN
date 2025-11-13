@@ -4,33 +4,40 @@ import pickle
 from .base_screen import BaseScreen, Button, TextInput
 
 class SceneGame(BaseScreen):
-    STATE_NAME = "GAME"
     
     def __init__(self, screen_width, screen_height, client):
         self.client = client
 
         super().__init__(screen_width, screen_height)
+        #placar
         self.placar_rect = pygame.Rect(self.largura_tela * 0.75, self.margem, 
                                        self.largura_tela * 0.2, self.altura_tela * 0.1)
+        
         btn_w = self.largura_tela * 0.15
         btn_h = self.altura_tela * 0.08
         btn_x = self.largura_tela * 0.8
         btn_y_start = self.altura_tela * 0.6
+
         self.btn_truco = Button(btn_x, btn_y_start, btn_w, btn_h, "TRUCO!", font_obj=self.fonte_padrao)
         self.btn_aceitar = Button(btn_x, btn_y_start + btn_h + 10, btn_w, btn_h, "ACEITAR", font_obj=self.fonte_padrao)
         self.btn_correr = Button(btn_x, btn_y_start + (btn_h + 10)*2, btn_w, btn_h, "CORRER", font_obj=self.fonte_padrao)
 
         self.botoes_cartas = []
+
         card_w, card_h = 100, 150
         hand_y = self.altura_tela - card_h - self.margem
         hand_x_start = self.largura_tela // 2 - card_w 
+
         for i in range(3):
             rect = pygame.Rect(hand_x_start + (i * (card_w + 10)), hand_y, card_w, card_h)
             self.botoes_cartas.append({'rect': rect, 'carta': None}) 
+
         self.estado_atual = {}     # snapshot do estado do jogo
         self.turn_action = None    # ação pendente
 
     def handle_events(self, events, game_data):
+        #mudar tudo isso aqui pra comunicação do jogo em si
+        #oq o client roda a cada jogada e interpretar na tela
         bridge = game_data['bridge']
         username = game_data['username']
         msg = bridge.get_room_message()
@@ -85,8 +92,10 @@ class SceneGame(BaseScreen):
         placar_eles = estado_jogo.get('t2p', 0)
         valor_rodada = estado_jogo.get('turn_value', 1)
 
-        pygame.draw.rect(screen, self.cor_box, self.placar_rect, border_radius=10)
-        pygame.draw.rect(screen, self.cor_borda, self.placar_rect, border_radius=10, width=3)
+        pygame.draw.rect(screen, self.cor_box, self.placar_rect, border_radius=10) #desenha plcar
+
+        pygame.draw.rect(screen, self.cor_borda, self.placar_rect, border_radius=10, width=3) #desenha placar
+
         placar_txt = self.fonte_padrao.render(f"NÓS: {placar_nos}", True, self.cor_texto)
         screen.blit(placar_txt, (self.placar_rect.x + 10, self.placar_rect.y + 10))
         placar_txt_eles = self.fonte_padrao.render(f"ELES: {placar_eles}", True, self.cor_texto)

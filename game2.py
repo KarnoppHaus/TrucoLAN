@@ -7,8 +7,6 @@ from ProjectUI.scene_login import SceneLogin
 from ProjectUI.scene_waitroom import SceneWaitRoom
 
 if __name__ == "__main__":
-
-   
     pygame.init()
     screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
     WIDTH, HEIGHT = screen.get_size() 
@@ -51,7 +49,6 @@ if __name__ == "__main__":
 
     #pygame.quit()  # Fecha o Pygame para o client CLI continuar limpo (se for CLI puro)
 
-
     while True:
         screen_atual = game_instances.get(client.screen)
         events = pygame.event.get()
@@ -62,11 +59,15 @@ if __name__ == "__main__":
                 client.start_client_event.set()
         if client.screen == "LOBBY":
             result = screen_atual.handle_events(events)
-            print(result)
             if result is not None:
                 client.data = result
                 client.screen_input_event.set()
-        print(client.screen)
+        if client.screen == "WAITROOM": #TODO
+            screen_atual.handle_events(events)
+        if client.screen == "GAME": #TODO
+            result = screen_atual.handle_events(events)
+            if result is not None:
+                pass
 
             #client.screen
 

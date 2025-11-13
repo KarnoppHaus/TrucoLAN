@@ -14,41 +14,49 @@ class TurnEnded(Exception):
     pass
 
 def ready_page(conn : socket, addr) -> int:
-    global players_ready
+    global connected_players
     user = conn.recv(64).decode()
     if not user:
         connected_players -= 1
         conn.close()
         return 1
+    conn.sendall(bytes(f'{players_n}', encoding='utf-8'))
 
     id = None
+    last_id = None
     while True:
-        last_id = id            
-        data = pickle.loads(conn.recv(64))
+        print(players_ready)
+        data = conn.recv(512)
         if not data:
-            if id is not None:
-                players_conn[id] = None
-                players_usernames[id] = None
-                players_ready[id] = None
+            if type(last_id) is int and last_id >= 0 and last_id < players_n - 1:
+                players_conn[last_id] = None
+                players_usernames[last_id] = None
+                players_ready[last_id] = None
             connected_players -= 1
             conn.close()
             return 1
-        id = int(data['id'])
-        ready = int(data['ready'])
+        try:
+            id, ready = list(map(int, data.decode().split()))
+        except ValueError:
+            id = None
+            ready = 0
+        print(f'ID: {id} - Ready: {ready}')
         with players_lock:
             if players_ready[-1]:
                 break
-            if id >= 0 and id < players_n - 1 and players_conn[id] is None:
+            if type(id) is int and id >= 0 and id < players_n and players_conn[id] is None:
+                print(f'ENTROU PORRA')
                 players_conn[id] = conn
                 players_usernames[id] = user
-                if ready:
-                    players_ready[int(id)] = 1
+                if ready == 1:
+                    players_ready[id] = 1
+                else:
+                    players_ready[id] = 0
                 if id != last_id and last_id != None:
                     players_conn[last_id] = None
                     players_usernames[last_id] = None
                     players_ready[last_id] = None
-            if not ready:
-                players_ready[int(id)] = 0
+                last_id = id
 
             if None in players_ready[:-1] or 0 in players_ready:
                 conn.sendall(b'0' + pickle.dumps(players_usernames))
@@ -82,7 +90,7 @@ def manage_flor(turn, caller):
                             answer_player_conn.sendall(b'SUC')
                             answer_player_conn.recv(1)
                             winners = turn.call_flor(caller.team, True)
-                            print(f'\nORDEM DA FLOR')
+                            # print(f'\nORDEM DA FLOR')
                             for player in [p for p in winners if p.flor is not None]:
                                 print(f'{player.name} : {player.flor}')
                             return 0

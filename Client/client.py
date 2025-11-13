@@ -12,14 +12,16 @@ class Client:
         self.rooms = []
         self.lr_event = threading.Event() # Evento para parar thread de listar salas
         self.thread_lock = threading.Lock() # Lock usado para receber salas e enviar códigos sem sobrepor envios
-        self.id : int
-        self.team : int
         self.data = None
         self.screen : str = 'LOGIN'
         self.infos_dict : dict
         self.infos_game : dict
 
-        self.draw_data : dict = {}
+        self.room_max_players : int
+        self.draw_data = {}
+
+        self.player_id : int | None = None
+        self.player_ready : int = 0
 
         self.screen_input_event = threading.Event()
         self.start_client_event = threading.Event()
@@ -28,7 +30,6 @@ class Client:
         self.screen_input_event.wait()
         self.screen_input_event.clear()
         return self.data
-        
 
     def lr_timer(self, s, stop_event):
         try:
@@ -37,7 +38,7 @@ class Client:
                     s.sendall(b'LSR')
                     self.rooms = pickle.loads(s.recv(1024))
                     self.draw_data = self.rooms
-                print(self.rooms)
+                # print(self.rooms)
                 time.sleep(1)
         except (OSError, EOFError):
             pass
@@ -57,7 +58,7 @@ class Client:
                     s.sendall(bytes(msg, encoding='utf-8'))
                     data = s.recv(1024)
 
-                print(data.decode())
+                # print(data.decode())
 
                 match data[0:3]:
                     case X if (X == b'CCT' or X == b'RCS'): # Pronta para conectar
@@ -78,27 +79,40 @@ class Client:
 
     def connect_room(self, room_port):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            s.connect((self.HUB_HOST, room_port))
+            while True:
+                try:
+                    s.connect((self.HUB_HOST, room_port))
+                    break
+                except ConnectionRefusedError:
+                    pass
             s.sendall(bytes(self.USER, encoding='utf-8')) # Send username
-
-            #Room HUB
+            self.room_max_players = int(s.recv(1))
+            
+            #Room Draw
+            self.draw_data = [None] * self.room_max_players
+            
             self.screen = 'WAITROOM'
-            data = 0
-            while not data:
-                id = int(self.screen_input())
-                # id = int(input(r'Insira o ID do jogador [0, ..., 3]: '))
-                ready = 1
-                while ready and not data:
-                    # ready = int(input(f'Insira 1 para PRONTO e 0 para ESPERAR: '))
-                    ready = int(self.screen_input())
-                    s.sendall(pickle.dumps({'id': id, 'ready': ready}))
-                    data = s.recv(512)
-                    self.draw_data = pickle.loads(data[1:])
-                    data = int(data[0].decode())
+            
+            data = [b'0']
+            while data[0] != b'1':
+                print(f'ID: {self.player_id} - Ready : {self.player_ready}')
+                s.sendall(bytes(f'{self.player_id} {self.player_ready}', encoding='utf-8'))
+                data = s.recv(512)
+                # print(data)
+                self.draw_data = pickle.loads(data[1:])
+                # print(self.draw_data)
+            
+            #while not data:
+                #id_ready = int(self.screen_input())
+                #id, ready = id_ready.split('\n')
+                #if not int(ready):
+                #    s.sendall(bytes(id_ready, encoding='utf-8'))
+                #    data = s.recv(512)
+                #    self.draw_data = pickle.loads(data[1:])
+                #    data = int(data[0].decode())
             
             s.sendall(b'1')
 
-            self.screen = 'GAME'
             # Entrou na função start_game do ROOM -> Todos players tem ID único [0, 2, 4] setado e todos estão prontos
             while True:
                 data = s.recv(512)
@@ -180,6 +194,7 @@ class Client:
                             print(f'INFOS:\nTime1 Points: {self.infos_dict["t1p"]}\nTime2 Points: {self.infos_dict["t2p"]}', f'{quem_jogou}{card_played}')
                             print(f'\nCartas: {", ".join(self.infos_dict["cards"])}\nEnvido: {self.infos_dict["envido"]}', f'\nFlor: {self.infos_dict["flor"]}\nTruco: {self.infos_dict["turn_value"]}')
                             s.sendall(b'1')
+                            self.screen = 'GAME'
                             break
 
                         case b'RND':

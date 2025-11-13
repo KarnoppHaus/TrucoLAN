@@ -138,10 +138,12 @@ class SceneLobby(BaseScreen):
         for event in events:
             self.input_criar_nome.handle_event(event)
             self.input_criar_senha.handle_event(event)
+
             if self.btn_players_2.handle_event(event):
                 self.popup_player_count = 2
-            if self.btn_players_4.handle_event(event):
+            elif self.btn_players_4.handle_event(event):
                 self.popup_player_count = 4
+                
             if self.btn_criar_ok.handle_event(event):
                 nome_sala = self.input_criar_nome.text
                 senha_sala = self.input_criar_senha.text
@@ -178,7 +180,6 @@ class SceneLobby(BaseScreen):
         self.input_criar_senha.text = ""
         self.input_entrar_senha.text = ""
         self.selected_room_name = None
-        self.popup_player_count = 4
 
     def _atualizar_lista_salas(self, rooms):
         self.botoes_salas = []

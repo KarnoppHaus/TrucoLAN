@@ -23,6 +23,8 @@ class Client:
         self.player_id : int | None = None
         self.player_ready : int = 0
 
+        self.to_do = None
+
         self.screen_input_event = threading.Event()
         self.start_client_event = threading.Event()
 
@@ -123,6 +125,7 @@ class Client:
                 while True:
                     match data[:3]:
                         case b'MOV':
+                            self.to_do = 'MOV'
                             #mov = input(f'Insira seu movimento: ')
                             mov = self.screen_input()
                             s.sendall(bytes(mov, encoding='utf-8'))
@@ -136,6 +139,7 @@ class Client:
                                 break
                     
                         case b'AEN':
+                            self.to_do = 'AEN'
                             envido = data.decode()[3:]
                             # ans = input(f'Aceita {envido}? YES/NOO para aceitar ou recusar{", REN ou FEN para aumentar" if envido[0] == 'e' else ", FEN para aumentar" if envido[0] == 'r' else ""}: ')
                             ans = self.screen_input()
@@ -150,6 +154,7 @@ class Client:
                                 break
                         
                         case b'ATC':
+                            self.to_do = 'ATC'
                             truco = data.decode()[3:]
                             print(f'Truco: {truco}')
                             # ans = input(f'Aceita {truco}? YES/NOO para aceitar ou recusar{", RET para aumentar" if truco == 'truco' else ", VQT para aumentar" if truco == 'retruco' else ""}: ')
@@ -165,6 +170,7 @@ class Client:
                                 break
 
                         case b'AFR':
+                            self.to_do = 'AFR'
                             # ans = input(f'{'YES/NOO para aceitar/recusar ' + ' '.join(data.decode()[3:].split('_'))}{', CTF para Contra-Flor ou CFR para Contra-Flor e o Resto' if data.decode()[3:] == 'flor' else ''}{', CFR para Contra-Flor e o Resto' if data.decode()[3:] == 'contra_flor' else ''}: ')
                             ans = self.screen_input()
                             s.sendall(bytes(ans, encoding='utf-8'))
@@ -178,6 +184,7 @@ class Client:
                                 break
                         
                         case b'CCF':
+                            self.to_do = 'CCF'
                             # ans = input(f'Você deseja chamar sua flor? YES/NOO: ')
                             ans = self.screen_input()
                             s.sendall(bytes(ans, encoding='utf-8'))
@@ -191,6 +198,7 @@ class Client:
                                 break
                         
                         case b'INF':
+                            self.to_do = None
                             self.infos_dict = pickle.loads(data[3:])
                             quem_jogou = f'\nQuem jogou: {self.infos_dict["player_name"]} - {self.infos_dict["player_turn"]}' if self.infos_dict.get("player_name", False) else ""
                             card_played = f'\nCard Played: {self.infos_dict["card_played"]}' if self.infos_dict.get("card_played", False) else ""
@@ -201,18 +209,20 @@ class Client:
                             break
 
                         case b'RND':
+                            self.to_do = None
                             self.infos_game = pickle.loads(data[3:])
                             print(f'O jogador {self.infos_game["player_name"]} jogou {self.infos_game["card_played"]}')
                             s.sendall(b'1')
                             break
-
                         
                         case b'TND':
+                            self.to_do = None
                             print(f'Turn ended')
                             s.sendall(b'1')
                             break
                         
                         case b'END':
+                            self.to_do = None
                             print(f'Partida finalizada!')
                             return 0
                             

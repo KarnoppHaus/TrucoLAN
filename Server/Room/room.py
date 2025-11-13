@@ -13,6 +13,11 @@ class ExitGame(Exception):
 class TurnEnded(Exception):
     pass
 
+def close_room():
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.connect((HUB_HOST, HUB_PORT))
+        s.sendall(bytes(f'RMV{os.environ.get("ROOM_NAME")}', encoding='utf-8'))
+
 def ready_page(conn : socket) -> int:
     global connected_players
     user = conn.recv(64).decode()
@@ -34,14 +39,14 @@ def ready_page(conn : socket) -> int:
                 players_ready[last_id] = None
             connected_players -= 1
             conn.close()
+            if connected_players == 0:
+                close_room()
             return 1
         try:
             id, ready = list(map(int, data.decode().split()))
         except ValueError:
             id = None
             ready = 0
-        print(f'Players Ready: {players_ready}')
-        print(f'ID{[id for id, c in enumerate(players_conn) if c is conn]}: {ready} | New ID: {id}')
         with players_lock:
             if players_ready[-1]:
                 break
@@ -458,8 +463,9 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             t.start()
     for t in ready_page_threads:
         t.join()
-    start_game()
+    try:
+        start_game()
+    except:
+        pass
         
-with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-    s.connect((HUB_HOST, HUB_PORT))
-    s.sendall(bytes(f'RMV{os.environ.get("ROOM_NAME")}', encoding='utf-8'))
+close_room()

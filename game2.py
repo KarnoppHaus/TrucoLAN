@@ -64,15 +64,16 @@ if __name__ == "__main__":
             if result is not None:
                 client.data = result
                 client.screen_input_event.set()
-                
+
         if client.screen == "WAITROOM": #TODO
             screen_atual.handle_events(events)
 
         if client.screen == "GAME": #TODO
             result = screen_atual.handle_events(events)
             if result is not None:
+                print(f'Result: {result}')
                 client.data = result
-                client.screen_input_event.set(events)
+                client.screen_input_event.set()
 
         if screen_atual:
             screen.fill((0, 0, 0))

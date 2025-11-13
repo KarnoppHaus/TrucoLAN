@@ -12,55 +12,13 @@ class SceneGame(BaseScreen):
         self.placar_rect = pygame.Rect(self.largura_tela * 0.75, self.margem, 
                                        self.largura_tela * 0.2, self.altura_tela * 0.1)
         
-        # Botões laterais
-        btn_w = self.largura_tela * 0.15
-        btn_h = self.altura_tela * 0.08
-        btn_x = self.margem
-        btn_y_start = self.altura_tela * 0.3
-
-        self.btn_truco = Button(btn_x, btn_y_start, btn_w, btn_h, "TRUCO!", font_obj=self.fonte_padrao)
-        self.btn_envido = Button(btn_x, btn_y_start + btn_h + 10, btn_w, btn_h, "ENVIDO", font_obj=self.fonte_padrao)
-        self.btn_flor = Button(btn_x, btn_y_start + 2 * (btn_h + 10), btn_w, btn_h, "FLOR", font_obj=self.fonte_padrao)
-        self.btn_baralho = Button(btn_x, btn_y_start + 3 * (btn_h + 10), btn_w, btn_h, "BARALHO", font_obj=self.fonte_padrao)
-
-        # Carrega cartas PNG
         self.cartas_imgs = {}
         for filename in os.listdir("ProjectUI/assets/cards_png"):
             if filename.endswith(".png"):
                 nome = os.path.splitext(filename)[0]
                 caminho = os.path.join("ProjectUI/assets/cards_png", filename)
                 self.cartas_imgs[nome] = pygame.image.load(caminho).convert_alpha()
-
-        # Slots de cartas do jogador
-        card_w, card_h = 100, 150
-        hand_y = self.altura_tela - card_h - self.margem
-        hand_x_start = self.largura_tela // 2 - card_w - 60
-        self.botoes_cartas = [
-            {'rect': pygame.Rect(hand_x_start + i*(card_w+20), hand_y, card_w, card_h), 'carta': None}
-            for i in range(3)
-        ]
-
-        # --- Na __init__ ---
-        self.slots_mesa = {
-            "baixo": {"rect": pygame.Rect(screen_width//2 - 50, screen_height - 370, 100, 150), "nome": "Você"},
-            "cima": {"rect": pygame.Rect(screen_width//2 - 50, 100, 100, 150), "nome": "Jogador Cima"},
-            "esquerda": {"rect": pygame.Rect(280, screen_height//2 - 115, 100, 150), "nome": "Jogador Esq"},
-            "direita": {"rect": pygame.Rect(screen_width - 380, screen_height//2 - 115, 100, 150), "nome": "Jogador Dir"},
-        }
-
-        # Caso queira associar uma carta temporária pra teste:
-        self.cartas_mesa = {
-            "baixo": "espadas_1",
-            "cima": "ouros_7",
-            "esquerda": "copas_3",
-            "direita": "paus_12"
-        }
-        #---------------------- teste
-
-        # Baralho (imagem virada)
-        self.baralho_img = pygame.image.load("ProjectUI/assets/cards_png/j_ouro.png").convert_alpha()
-        self.baralho_rect = pygame.Rect(self.largura_tela - 150, self.altura_tela - 200, 100, 150)
-
+        
     # Atualiza as cartas do jogador
     def atualizar_mao(self):
         mao = self.client.infos_dict.get("cards", [])
@@ -79,12 +37,11 @@ class SceneGame(BaseScreen):
                     if botao["rect"].collidepoint(mouse_pos) and botao["carta"]:
                         carta = botao["carta"]
                         comando = f"MOV {carta}"
-                        self.client.data = comando
-                        self.client.screen_input_event.set()
                         return comando
 
     def draw(self, screen):
         super().draw(screen)
+        self.draw_layout()
 
         # === Placar ===
         pygame.draw.rect(screen, self.cor_box, self.placar_rect, border_radius=10)
@@ -101,7 +58,7 @@ class SceneGame(BaseScreen):
 
             # desenhar carta se existir
             carta_nome = self.cartas_mesa.get(pos)
-            if carta_nome and carta_nome in self.cartas_imgs:
+            if carta_nome:
                 img = pygame.transform.scale(self.cartas_imgs[carta_nome], (rect.width, rect.height))
                 screen.blit(img, rect.topleft)
             else:
@@ -118,7 +75,7 @@ class SceneGame(BaseScreen):
         for botao in self.botoes_cartas:
             rect = botao["rect"]
             carta_nome = botao["carta"]
-            if carta_nome and carta_nome in self.cartas_imgs:
+            if carta_nome:
                 img = pygame.transform.scale(self.cartas_imgs[carta_nome], (rect.width, rect.height))
                 screen.blit(img, rect.topleft)
             else:
@@ -131,3 +88,46 @@ class SceneGame(BaseScreen):
         # === Botões laterais ===
         for btn in [self.btn_truco, self.btn_envido, self.btn_flor, self.btn_baralho]:
             btn.draw(screen)
+
+    def draw_layout(self):
+        # Botões laterais
+        btn_w = self.largura_tela * 0.15
+        btn_h = self.altura_tela * 0.08
+        btn_x = self.margem
+        btn_y_start = self.altura_tela * 0.3
+
+        self.btn_truco = Button(btn_x, btn_y_start, btn_w, btn_h, "TRUCO!", font_obj=self.fonte_padrao)
+        self.btn_envido = Button(btn_x, btn_y_start + btn_h + 10, btn_w, btn_h, "ENVIDO", font_obj=self.fonte_padrao)
+        self.btn_flor = Button(btn_x, btn_y_start + 2 * (btn_h + 10), btn_w, btn_h, "FLOR", font_obj=self.fonte_padrao)
+        self.btn_baralho = Button(btn_x, btn_y_start + 3 * (btn_h + 10), btn_w, btn_h, "BARALHO", font_obj=self.fonte_padrao)
+
+        # Slots de cartas do jogador
+        card_w, card_h = 100, 150
+        hand_y = self.altura_tela - card_h - self.margem
+        hand_x_start = self.largura_tela // 2 - card_w - 60
+        self.botoes_cartas = []
+        for i, card in enumerate(self.client.infos_dict['cards']):
+            self.botoes_cartas.append(
+                {'rect': pygame.Rect(hand_x_start + i*(card_w+20), hand_y, card_w, card_h), 'carta': card}
+                )
+
+        # --- Na __init__ ---
+        self.slots_mesa = {
+            "baixo": {"rect": pygame.Rect(self.largura_tela//2 - 50, self.altura_tela - 370, 100, 150), "nome": "Você"},
+            "cima": {"rect": pygame.Rect(self.largura_tela//2 - 50, 100, 100, 150), "nome": "Jogador Cima"},
+            "esquerda": {"rect": pygame.Rect(280, self.altura_tela//2 - 115, 100, 150), "nome": "Jogador Esq"},
+            "direita": {"rect": pygame.Rect(self.largura_tela - 380, self.altura_tela//2 - 115, 100, 150), "nome": "Jogador Dir"},
+        }
+
+        # Caso queira associar uma carta temporária pra teste:
+        self.cartas_mesa = {
+            "baixo": "1_espadas",
+            "cima": "7_ouros",
+            "esquerda": "3_copas",
+            "direita": "k_paus"
+        }
+        #---------------------- teste
+
+        # Baralho (imagem virada)
+        self.baralho_img = pygame.image.load("ProjectUI/assets/cards_png/j_ouros.png").convert_alpha()
+        self.baralho_rect = pygame.Rect(self.largura_tela - 150, self.altura_tela - 200, 100, 150)

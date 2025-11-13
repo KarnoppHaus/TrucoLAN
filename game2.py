@@ -1,7 +1,7 @@
 import pygame
 import threading
 from Client.client import Client
-#from ProjectUI.scene_game import SceneGame
+from ProjectUI.scene_game import SceneGame
 from ProjectUI.scene_lobby import SceneLobby
 from ProjectUI.scene_login import SceneLogin
 from ProjectUI.scene_waitroom import SceneWaitRoom
@@ -25,7 +25,7 @@ if __name__ == "__main__":
         "LOGIN" : SceneLogin(WIDTH, HEIGHT, client),
         "LOBBY" : SceneLobby(WIDTH,HEIGHT, client),
         "WAITROOM" : SceneWaitRoom(WIDTH, HEIGHT, client),
-        #"GAME" : SceneGame(WIDTH, HEIGHT, client)
+        "GAME" : SceneGame(WIDTH, HEIGHT, client)
     }
     
     print(1)
@@ -69,9 +69,8 @@ if __name__ == "__main__":
         if client.screen == "GAME": #TODO
             result = screen_atual.handle_events(events)
             if result is not None:
-                pass
-
-            #client.screen
+                client.data = result
+                client.screen_input_event.set(events)
 
         if screen_atual:
             screen.fill((0, 0, 0))

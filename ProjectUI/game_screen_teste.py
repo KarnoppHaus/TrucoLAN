@@ -1,11 +1,11 @@
 import pygame
 import os
-from .base_screen import BaseScreen, Button
+from base_screen import BaseScreen, Button
 
 class SceneGame(BaseScreen):
     
-    def __init__(self, screen_width, screen_height, client):
-        self.client = client
+    def __init__(self, screen_width, screen_height):
+        # self.client = client
         super().__init__(screen_width, screen_height)
 
         # Área do placar
@@ -131,3 +131,34 @@ class SceneGame(BaseScreen):
         # === Botões laterais ===
         for btn in [self.btn_truco, self.btn_envido, self.btn_flor, self.btn_baralho]:
             btn.draw(screen)
+
+
+
+if __name__ == "__main__":
+
+    pygame.init()
+    W, H = 1280, 720
+    screen = pygame.display.set_mode((W, H))
+    pygame.display.set_caption("Truco - Tela Standalone")
+
+    scene = SceneGame(W, H)
+
+    clock = pygame.time.Clock()
+    running = True
+
+    while running:
+        events = []
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
+            else:
+                events.append(event)
+
+        scene.handle_events(events)
+        scene.draw(screen)
+
+        pygame.display.flip()
+        clock.tick(60)
+
+    pygame.quit()
+    sys.exit()

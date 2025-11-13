@@ -13,7 +13,7 @@ class ExitGame(Exception):
 class TurnEnded(Exception):
     pass
 
-def ready_page(conn : socket, addr) -> int:
+def ready_page(conn : socket) -> int:
     global connected_players
     user = conn.recv(64).decode()
     if not user:
@@ -25,7 +25,7 @@ def ready_page(conn : socket, addr) -> int:
     id = None
     last_id = None
     while True:
-        print(players_ready)
+        
         data = conn.recv(512)
         if not data:
             if type(last_id) is int and last_id >= 0 and last_id < players_n - 1:
@@ -40,23 +40,24 @@ def ready_page(conn : socket, addr) -> int:
         except ValueError:
             id = None
             ready = 0
-        print(f'ID: {id} - Ready: {ready}')
+        print(f'Players Ready: {players_ready}')
+        print(f'ID{[id for id, c in enumerate(players_conn) if c is conn]}: {ready} | New ID: {id}')
         with players_lock:
             if players_ready[-1]:
                 break
-            if type(id) is int and id >= 0 and id < players_n and players_conn[id] is None:
-                print(f'ENTROU PORRA')
+            if type(id) is int and id >= 0 and id < players_n and (players_conn[id] is None or players_conn[id] == conn):
                 players_conn[id] = conn
                 players_usernames[id] = user
-                if ready == 1:
-                    players_ready[id] = 1
-                else:
-                    players_ready[id] = 0
-                if id != last_id and last_id != None:
+                if id != last_id and last_id is not None:
                     players_conn[last_id] = None
                     players_usernames[last_id] = None
                     players_ready[last_id] = None
                 last_id = id
+            if last_id is not None:
+                if ready == 1:
+                    players_ready[last_id] = 1
+                else:
+                    players_ready[last_id] = 0
 
             if None in players_ready[:-1] or 0 in players_ready:
                 conn.sendall(b'0' + pickle.dumps(players_usernames))
@@ -299,7 +300,11 @@ def manage_envido(turn : Turn, caller : Player) -> None:
                 answer_player_conn.sendall(b'ERR')
                 answer_player_conn.recv(1)
 
-def start_game():    
+def start_game():
+    for i, conn in enumerate(players_conn):
+        conn.sendall(bytes(f'{i}', encoding='utf-8'))
+        conn.recv(1)
+    
     for player_id in range(int(os.environ.get("PLAYERS"))):
         team = t1 if player_id % 2 == 0 else t2
         player = Player(player_id, players_usernames[player_id], team)
@@ -332,7 +337,7 @@ def start_game():
                                     send_infos = {'cards': [key for key, item in player_infos.cards.items() if item], 'envido': player_infos.envido_points, 'flor': player_infos.flor, 'turn_value': turn.turn_value, 't1p': t1.points, 't2p': t2.points}
                                     player_conn_infos.sendall(b'INF' + pickle.dumps(send_infos))
                                     player_conn_infos.recv(1)
-                                    
+                                
                                 player_conn.sendall(b'MOV')
                             ERR = False
                             mov = player_conn.recv(512)
@@ -447,7 +452,7 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         if connected_players < players_n:
             conn, addr = s.accept()
             connected_players += 1
-            t = threading.Thread(target=ready_page, args=(conn, addr))
+            t = threading.Thread(target=ready_page, args=(conn,))
             t.daemon = True
             ready_page_threads.append(t)
             t.start()

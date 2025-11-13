@@ -93,14 +93,12 @@ class Client:
             
             self.screen = 'WAITROOM'
             
-            data = [b'0']
-            while data[0] != b'1':
+            data = b'0'
+            while data[0:1] != b'1':
                 print(f'ID: {self.player_id} - Ready : {self.player_ready}')
                 s.sendall(bytes(f'{self.player_id} {self.player_ready}', encoding='utf-8'))
                 data = s.recv(512)
-                # print(data)
                 self.draw_data = pickle.loads(data[1:])
-                # print(self.draw_data)
             
             #while not data:
                 #id_ready = int(self.screen_input())
@@ -112,6 +110,11 @@ class Client:
                 #    data = int(data[0].decode())
             
             s.sendall(b'1')
+
+            self.player_id = int(s.recv(1).decode())
+            s.sendall(b'1')
+            
+            print(f'Player ID: {self.player_id}')
 
             # Entrou na função start_game do ROOM -> Todos players tem ID único [0, 2, 4] setado e todos estão prontos
             while True:

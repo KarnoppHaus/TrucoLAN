@@ -1,12 +1,13 @@
 import pygame
 import threading
 from Client.client import Client
-from ProjectUI.scene_game import SceneGame
+#from ProjectUI.scene_game import SceneGame
 from ProjectUI.scene_lobby import SceneLobby
 from ProjectUI.scene_login import SceneLogin
 from ProjectUI.scene_waitroom import SceneWaitRoom
 
 if __name__ == "__main__":
+    client = Client()
     pygame.init()
     screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
     WIDTH, HEIGHT = screen.get_size() 
@@ -16,7 +17,6 @@ if __name__ == "__main__":
     # login_scene = SceneLogin(WIDTH, HEIGHT)
     # result = ""
     
-    client = Client()
     t = threading.Thread(target=client.start)
     t.daemon = True
     t.start()
@@ -25,8 +25,10 @@ if __name__ == "__main__":
         "LOGIN" : SceneLogin(WIDTH, HEIGHT, client),
         "LOBBY" : SceneLobby(WIDTH,HEIGHT, client),
         "WAITROOM" : SceneWaitRoom(WIDTH, HEIGHT, client),
-        "GAME" : SceneGame(WIDTH, HEIGHT, client)
+        #"GAME" : SceneGame(WIDTH, HEIGHT, client)
     }
+    
+    print(1)
 
     # running = True
     # while running and result == "":

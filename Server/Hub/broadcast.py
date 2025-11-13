@@ -11,7 +11,7 @@ def get_local_ip():
             ip = "127.0.0.1"
         return ip
 
-PORT = 50001             # porta conhecida para descoberta
+PORT = 50000             # porta conhecida para descoberta
 INTERVAL = 2           # segundos entre anúncios
 SERVICE_NAME = "TrucoHUB"
 IP = get_local_ip()

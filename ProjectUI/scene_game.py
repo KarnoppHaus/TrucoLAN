@@ -1,123 +1,217 @@
 import pygame
-import math
+from .base_screen import BaseScreen
 import pickle
-from .base_screen import BaseScreen, Button, TextInput
+import cairosvg
 
 class SceneGame(BaseScreen):
-    
     def __init__(self, screen_width, screen_height, client):
         self.client = client
-
+        #sem client só pra teste
+        #self.client = client
         super().__init__(screen_width, screen_height)
-        #placar
-        self.placar_rect = pygame.Rect(self.largura_tela * 0.75, self.margem, 
-                                       self.largura_tela * 0.2, self.altura_tela * 0.1)
-        
-        btn_w = self.largura_tela * 0.15
-        btn_h = self.altura_tela * 0.08
-        btn_x = self.largura_tela * 0.8
-        btn_y_start = self.altura_tela * 0.6
 
-        self.btn_truco = Button(btn_x, btn_y_start, btn_w, btn_h, "TRUCO!", font_obj=self.fonte_padrao)
-        self.btn_aceitar = Button(btn_x, btn_y_start + btn_h + 10, btn_w, btn_h, "ACEITAR", font_obj=self.fonte_padrao)
-        self.btn_correr = Button(btn_x, btn_y_start + (btn_h + 10)*2, btn_w, btn_h, "CORRER", font_obj=self.fonte_padrao)
+        # Mesa
+        self.mesa_rect = pygame.Rect(self.margem*2, self.margem*2,
+                                     self.largura_tela - self.margem*4,
+                                     self.altura_tela - self.margem*4)
 
-        self.botoes_cartas = []
+        # Botão Sair (topo-esquerdo da mesa)
+        sair_w = int(self.mesa_rect.w * 0.18)
+        sair_h = int(self.altura_tela * 0.07)
+        self.btn_sair = pygame.Rect(self.mesa_rect.x + self.margem,
+                                    self.mesa_rect.y + self.margem,
+                                    sair_w, sair_h)
 
-        card_w, card_h = 100, 150
-        hand_y = self.altura_tela - card_h - self.margem
-        hand_x_start = self.largura_tela // 2 - card_w 
+        # Coluna de botões à esquerda (dentro da mesa)
+        col_w = int(self.mesa_rect.w * 0.22)
+        col_x = self.mesa_rect.x + self.margem
+        col_y0 = self.btn_sair.bottom + self.margem*2
+        esp = int(self.altura_tela * 0.02)
+        btn_h_col = int(self.altura_tela * 0.08)
+        labels = ["Truco", "Envido", "Flor", "Ir ao baralho"]
+        self.btns_esq = [(label, pygame.Rect(col_x, col_y0 + i*(btn_h_col+esp), col_w, btn_h_col))
+                         for i, label in enumerate(labels)]
 
-        for i in range(3):
-            rect = pygame.Rect(hand_x_start + (i * (card_w + 10)), hand_y, card_w, card_h)
-            self.botoes_cartas.append({'rect': rect, 'carta': None}) 
+        # Placar no topo direito da mesa
+        self.placar_rect = pygame.Rect(self.mesa_rect.right - int(self.mesa_rect.w*0.25) - self.margem,
+                                       self.mesa_rect.y + self.margem,
+                                       int(self.mesa_rect.w*0.25),
+                                       int(self.altura_tela*0.10))
 
-        self.estado_atual = {}     # snapshot do estado do jogo
-        self.turn_action = None    # ação pendente
+        # Tapete + baralho à direita inferior
+        tapete_w = int(self.mesa_rect.w * 0.12)
+        tapete_h = int(self.mesa_rect.h * 0.35)
+        tapete_x = self.mesa_rect.right - self.margem - tapete_w
+        tapete_y = self.mesa_rect.bottom - self.margem - tapete_h
+        self.tapete_rect = pygame.Rect(tapete_x, tapete_y, tapete_w, tapete_h)
 
-    def handle_events(self, events, game_data):
-        #mudar tudo isso aqui pra comunicação do jogo em si
-        #oq o client roda a cada jogada e interpretar na tela
-        bridge = game_data['bridge']
-        username = game_data['username']
-        msg = bridge.get_room_message()
-        if msg:
-            prefix = msg[:3]
-            if prefix == b'INF':
-                self.estado_atual = pickle.loads(msg[3:])
-            elif prefix in [b'MOV', b'AEN', b'ATC', b'AFR', b'CCF']:
-                self.turn_action = prefix.decode()
-            elif prefix == b'RND':
-                info = pickle.loads(msg[3:])
-                self.estado_atual['last_round'] = info
-            elif prefix == b'TND':
-                self.estado_atual['turn_ended'] = True
-            elif prefix == b'END':
-                return "LOGIN"
-            elif prefix == b'ERR':
-                # Mostre mensagem de erro no UI se desejar
-                pass
+        baralho_w = int(tapete_w*0.7)
+        baralho_h = int(tapete_h*0.8)
+        self.baralho_rect = pygame.Rect(
+            tapete_x + (tapete_w - baralho_w)//2,
+            tapete_y + (tapete_h - baralho_h)//2,
+            baralho_w, baralho_h
+        )
 
-        mao = self.estado_atual.get('cards', [])
-        # Handle cartas clicadas
-        for event in events:
-            for i, slot_carta in enumerate(self.botoes_cartas):
-                rect = slot_carta['rect']
-                carta = slot_carta.get('carta')
-                if event.type == pygame.MOUSEMOTION:
-                    if rect.collidepoint(event.pos):
-                        rect.y = self.altura_tela - 170 - self.margem 
-                    else:
-                        rect.y = self.altura_tela - 150 - self.margem
-                if event.type == pygame.MOUSEBUTTONDOWN:
-                    if rect.collidepoint(event.pos) and carta is not None and self.turn_action == "MOV":
-                        bridge.send_game_command(b'PLY' + str(carta).encode())
-                        self.botoes_cartas[i]['carta'] = None 
+        # Cartas na mesa (3 slots)
+        cm_w, cm_h = int(self.mesa_rect.w*0.09), int(self.mesa_rect.h*0.16)
+        cx = self.mesa_rect.centerx
+        cy = self.mesa_rect.centery - int(self.mesa_rect.h*0.10)
+        self.cartas_mesa_rects = [
+            pygame.Rect(cx - cm_w - 20, cy, cm_w, cm_h),
+            pygame.Rect(cx + 20, cy, cm_w, cm_h),
+            pygame.Rect(cx - cm_w//2, cy + cm_h + 20, cm_w, cm_h),
+        ]
 
-            # Truco, aceitar, correr
-            if self.turn_action == "MOV" and self.btn_truco.handle_event(event):
-                bridge.send_game_command(b'TRC')
-            if self.turn_action in ("ATC", "AEN"):
-                if self.btn_aceitar.handle_event(event):
-                    bridge.send_game_command(b'YES')
-                if self.btn_correr.handle_event(event):
-                    bridge.send_game_command(b'NOO')
-        return "GAME"
+        # Mão do jogador (3 slots, retos)
+        hand_w, hand_h = 100, 150
+        hand_gap = 12
+        hand_y = self.mesa_rect.bottom - hand_h - self.margem
+        hand_x = self.mesa_rect.centerx - (hand_w*3 + hand_gap*2)//2
+        self.mao_rects = [
+            pygame.Rect(hand_x + i*(hand_w+hand_gap), hand_y, hand_w, hand_h)
+            for i in range(3)
+        ]
+
+        # Estado visual mínimo
+        self.placar_nos = 0
+        self.placar_eles = 0
+        self.valor_rodada = 1
+        self.labels_mao = ["4♦", "7♥", "A♣"]  # apenas para visual
+        self.labels_mesa = ["", "", ""]       # preenchidos quando você quiser
+
+        # Hover tracking (opcional, só visual)
+        self._hover = None
+
+    # Handlers vazios para plugar depois
+    def on_click_sair(self): pass
+    def on_click_truco(self): pass
+    def on_click_envido(self): pass
+    def on_click_flor(self): pass
+    def on_click_ir_baralho(self): pass
+    def on_click_baralho(self): pass
+    def on_click_carta(self, i): pass
+    def on_click_mesa_slot(self, k): pass
+
+
+    def handle_events(self, events):
+        for e in events:
+            if e.type == pygame.MOUSEMOTION:
+                self._hover = e.pos
+            if e.type == pygame.MOUSEBUTTONDOWN and e.button == 1:
+                mx, my = e.pos
+                # Sair
+                if self.btn_sair.collidepoint(mx, my):
+                    self.on_click_sair(); continue
+                # Coluna esquerda
+                for idx, (label, r) in enumerate(self.btns_esq):
+                    if r.collidepoint(mx, my):
+                        if idx == 0: self.on_click_truco()
+                        elif idx == 1: self.on_click_envido()
+                        elif idx == 2: self.on_click_flor()
+                        elif idx == 3: self.on_click_ir_baralho()
+                        break
+                # Baralho
+                if self.baralho_rect.collidepoint(mx, my):
+                    self.on_click_baralho()
+                # Cartas da mão
+                for i, r in enumerate(self.mao_rects):
+                    if r.collidepoint(mx, my):
+                        self.on_click_carta(i); break
+                # Slots na mesa
+                for k, r in enumerate(self.cartas_mesa_rects):
+                    if r.collidepoint(mx, my):
+                        self.on_click_mesa_slot(k); break
 
     def draw(self, screen):
         super().draw(screen)
-        estado_jogo = self.estado_atual
-        
-        placar_nos = estado_jogo.get('t1p', 0)
-        placar_eles = estado_jogo.get('t2p', 0)
-        valor_rodada = estado_jogo.get('turn_value', 1)
 
-        pygame.draw.rect(screen, self.cor_box, self.placar_rect, border_radius=10) #desenha plcar
+        # Mesa
+        mesa_cor = (175, 137, 88)   # marrom da referência
+        pygame.draw.rect(screen, mesa_cor, self.mesa_rect, border_radius=8)
+        pygame.draw.rect(screen, self.cor_borda, self.mesa_rect, width=4, border_radius=8)
 
-        pygame.draw.rect(screen, self.cor_borda, self.placar_rect, border_radius=10, width=3) #desenha placar
+        # Sair
+        pygame.draw.rect(screen, self.cor_box, self.btn_sair, border_radius=20)
+        pygame.draw.rect(screen, self.cor_borda, self.btn_sair, width=3, border_radius=20)
+        t = self.fonte_padrao.render("← Sair", True, self.cor_texto)
+        screen.blit(t, t.get_rect(center=self.btn_sair.center))
 
-        placar_txt = self.fonte_padrao.render(f"NÓS: {placar_nos}", True, self.cor_texto)
-        screen.blit(placar_txt, (self.placar_rect.x + 10, self.placar_rect.y + 10))
-        placar_txt_eles = self.fonte_padrao.render(f"ELES: {placar_eles}", True, self.cor_texto)
-        screen.blit(placar_txt_eles, (self.placar_rect.x + 10, self.placar_rect.y + 45))
+        # Placar
+        pygame.draw.rect(screen, self.cor_box, self.placar_rect, border_radius=10)
+        pygame.draw.rect(screen, self.cor_borda, self.placar_rect, width=3, border_radius=10)
+        txt1 = self.fonte_padrao.render(f"NÓS: {self.placar_nos}", True, self.cor_texto)
+        txt2 = self.fonte_padrao.render(f"ELES: {self.placar_eles}", True, self.cor_texto)
+        screen.blit(txt1, (self.placar_rect.x + 10, self.placar_rect.y + 10))
+        screen.blit(txt2, (self.placar_rect.x + 10, self.placar_rect.y + 45))
 
-        mao = estado_jogo.get('cards', [])
-        for i, slot_carta in enumerate(self.botoes_cartas):
-            if i < len(mao):
-                slot_carta['carta'] = mao[i]
-            if slot_carta['carta']:
-                pygame.draw.rect(screen, self.cor_input, slot_carta['rect'], border_radius=10)
-                pygame.draw.rect(screen, self.cor_borda, slot_carta['rect'], border_radius=10, width=2)
-                carta_nome = str(slot_carta['carta'])
-                txt_surf = self.fonte_pequena.render(carta_nome, True, self.cor_texto)
-                txt_rect = txt_surf.get_rect(center=slot_carta['rect'].center)
-                screen.blit(txt_surf, txt_rect)
+        # Coluna esquerda
+        for label, r in self.btns_esq:
+            pygame.draw.rect(screen, self.cor_box, r, border_radius=20)
+            pygame.draw.rect(screen, self.cor_borda, r, width=3, border_radius=20)
+            t = self.fonte_padrao.render(label, True, self.cor_texto)
+            screen.blit(t, t.get_rect(center=r.center))
 
-        # Botões de ação (só desenha se protocolo permitir)
-        if self.turn_action == "MOV":
-            self.btn_truco.draw(screen)
-        if self.turn_action in ("ATC", "AEN"):
-            self.btn_aceitar.draw(screen)
-            self.btn_correr.draw(screen)
-        # Adicione lógica para outras fases se desejar
+        # Tapete + baralho
+        pygame.draw.rect(screen, (30,110,60), self.tapete_rect, border_radius=8)
+        pygame.draw.rect(screen, (200,0,0), self.baralho_rect, border_radius=10)
+        pygame.draw.rect(screen, self.cor_borda, self.baralho_rect, width=2, border_radius=10)
 
+        # Cartas na mesa
+        for k, r in enumerate(self.cartas_mesa_rects):
+            pygame.draw.rect(screen, self.cor_input, r, border_radius=10)
+            pygame.draw.rect(screen, self.cor_borda, r, width=2, border_radius=10)
+            label = self.labels_mesa[k]
+            if label:
+                s = self.fonte_pequena.render(label, True, self.cor_texto)
+                screen.blit(s, s.get_rect(center=r.center))
+
+        # Mão do jogador
+        for i, r in enumerate(self.mao_rects):
+            pygame.draw.rect(screen, self.cor_input, r, border_radius=10)
+            pygame.draw.rect(screen, self.cor_borda, r, width=2, border_radius=10)
+            label = self.labels_mao[i] if i < len(self.labels_mao) else ""
+            if label:
+                s = self.fonte_pequena.render(label, True, self.cor_texto)
+                screen.blit(s, s.get_rect(center=r.center))
+
+        # Hover outline (opcional)
+        if self._hover:
+            mx, my = self._hover
+            for r in [self.btn_sair, *[r for _, r in self.btns_esq],
+                      self.baralho_rect, *self.cartas_mesa_rects, *self.mao_rects]:
+                if r.collidepoint(mx, my):
+                    pygame.draw.rect(screen, (255, 255, 0), r, width=2, border_radius=12)
+                    break
+
+if __name__ == "__main__":
+
+    pygame.init()
+    W, H = 1280, 720
+    screen = pygame.display.set_mode((W, H))
+    pygame.display.set_caption("Truco - Tela Standalone")
+
+    #pygame.font.init()
+
+    # Cliente dummy só para satisfazer assinatura
+    scene = SceneGame(W, H, DummyClient())
+
+    clock = pygame.time.Clock()
+    running = True
+
+    while running:
+        events = []
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
+            else:
+                events.append(event)
+
+        scene.handle_events(events)
+        scene.draw(screen)
+
+        pygame.display.flip()
+        clock.tick(60)
+
+    pygame.quit()
+    sys.exit()
